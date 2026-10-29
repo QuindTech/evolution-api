@@ -764,8 +764,9 @@ export class BusinessStartupService extends ChannelStartupService {
               },
             });
 
+            // Skip only this status: returning here dropped the rest of the batch
             if (!findMessage) {
-              return;
+              continue;
             }
 
             if (item.message === null && item.status === undefined) {
@@ -806,7 +807,12 @@ export class BusinessStartupService extends ChannelStartupService {
               instanceId: this.instanceId,
             };
 
-            this.sendDataWebhook(Events.MESSAGES_UPDATE, message);
+            // Forward Meta's delivery errors (code/title) so webhook consumers can tell why a message failed.
+            // Webhook only: MessageUpdate has no column for them.
+            this.sendDataWebhook(
+              Events.MESSAGES_UPDATE,
+              item.errors?.length ? { ...message, errors: item.errors } : message,
+            );
 
             await this.prismaRepository.messageUpdate.create({
               data: message,
